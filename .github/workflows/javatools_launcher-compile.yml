@@ -1,0 +1,51 @@
+name: javatools_launcher compile
+
+# This section ("on") defines which events should trigger this workflow to run
+on:
+  # Pushing to these branches triggers the workflow to run
+  push: 
+    # javatools-crosscompile branch is only in this list for testing purposes
+    branches: [ master, javatools-crosscompile ] 
+    # But only if there is a change in a file in this path
+    paths: 
+      - javatools_launcher/src/main/c/
+  
+  # Pullrequests triggers the  script the same way as a push except it only works on master
+  pull_request:
+    branches: [ master ]
+    paths: 
+      - javatools_launcher/src/main/c/
+
+jobs:
+  build:
+    # This defines the OS to run this workflow on. 
+    # ${{matrix.os}} is a way to define the OS as being one of those defined in the matrix section.
+    runs-on: ${{matrix.os}}
+    strategy:
+      # Here the operating systems used are defined.
+      # Each OS defines the MAKE_OS variable to use when compiling.
+      matrix: 
+        include:
+          - os: ubuntu-latest
+            MAKE_OS: linux
+            
+          - os: windows-latest
+            MAKE_OS: windows
+            
+          - os: macos-latest
+            MAKE_OS: macos
+
+ 
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: configure
+      run: ./configure
+    - name: make
+      run: make OS_NAME=${{matrix.MAKE_OS}} -o javatools/build/exe/${{matrix.MAKE_OS}}_launcher -C javatools/src/main/c/
+
+      # I'm unsure if theese parts are required, leeveng them out until testing is possible
+   # - name: make check
+   #   run: make check
+   # - name: make distcheck
+   #   run: make distcheck
