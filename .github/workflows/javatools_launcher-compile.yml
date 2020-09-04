@@ -46,8 +46,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: print dir
-      run: ls -al
     - name: make
       run: >
         make OS_NAME=${{matrix.MAKE_OS}}
