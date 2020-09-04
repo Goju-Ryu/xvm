@@ -10,11 +10,18 @@ on:
     paths: 
       - javatools_launcher/src/main/c/
   
-  # Pullrequests triggers the  script the same way as a push except it only works on master
+  # Pull requests triggers the  script the same way as a push except it only works on master
   pull_request:
     branches: [ master ]
     paths: 
       - javatools_launcher/src/main/c/
+
+  # This is a hook for manually activating the workflow
+  # It can be activated in two ways
+  #   - Click the "run workflow" button in github
+  #   - @see <a href="https://docs.github.com/en/rest/reference/repos#create-a-repository-dispatch-event">
+  #     Send a post request to the web hook<a/>
+  workflow_dispatch:
 
 jobs:
   build:
