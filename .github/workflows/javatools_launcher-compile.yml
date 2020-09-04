@@ -46,8 +46,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: configure
-      run: ./configure
     - name: make
       run: make OS_NAME=${{matrix.MAKE_OS}} -o javatools/build/exe/${{matrix.MAKE_OS}}_launcher -C javatools/src/main/c/
 
