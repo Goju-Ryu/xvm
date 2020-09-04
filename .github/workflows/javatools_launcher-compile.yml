@@ -49,7 +49,10 @@ jobs:
     - name: print dir
       run: ls -al
     - name: make
-      run: make OS_NAME=${{matrix.MAKE_OS}} -o javatools/build/exe/${{matrix.MAKE_OS}}_launcher -C javatools/src/main/c/
+      run: >
+        make OS_NAME=${{matrix.MAKE_OS}}
+        -o javatools_launcher/build/exe/${{matrix.MAKE_OS}}_launcher
+        -C javatools_launcher/src/main/c
 
       # I'm unsure if theese parts are required, leeveng them out until testing is possible
    # - name: make check
