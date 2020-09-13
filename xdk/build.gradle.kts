@@ -113,6 +113,12 @@ val compileJsonDB = tasks.register<JavaExec>("compileJsonDB") {
     main = "org.xvm.tool.Compiler"
 }
 
+fun download(url : String, path : String){
+    val destFile = File(path)
+    destFile.parentFile.mkdirs()
+    ant.invokeMethod("get", mapOf("src" to url, "dest" to destFile))
+}
+
 tasks.register("build") {
     group       = "Build"
     description = "Build the XDK"
@@ -121,6 +127,17 @@ tasks.register("build") {
     val launcher         = project(":javatools_launcher")
     val macos_launcher   = "${launcher.buildDir}/exe/macos_launcher"
     val windows_launcher = "${launcher.buildDir}/exe/windows_launcher.exe"
+
+    //TODO replace sourceURL with url to the xtclang releases if merged
+    val sourceUrl = "https://github.com/Goju-Ryu/xvm/releases/latest/download/"
+    if (!File(macos_launcher).exists()) {
+        println("no macos_launcher not found, getting it from source...")
+        download("$sourceUrl/macos_launcher", macos_launcher)
+    }
+    if (!File(windows_launcher).exists()) {
+        println("no windows_launcher not found, getting it from source...")
+        download("$sourceUrl/windows_launcher.exe", windows_launcher)
+    }
 
     // compile Ecstasy
     val coreSrc = fileTree(ecstasyMain).getFiles().stream().
