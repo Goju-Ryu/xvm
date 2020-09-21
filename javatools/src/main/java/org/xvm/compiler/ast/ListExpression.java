@@ -20,6 +20,11 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.op.Var_S;
 import org.xvm.asm.op.Var_SN;
 
+import org.xvm.compiler.Compiler;
+
+import org.xvm.util.ListSet;
+import org.xvm.util.Severity;
+
 
 /**
  * A list expression is an expression containing some number (0 or more) expressions of some common
@@ -31,8 +36,6 @@ import org.xvm.asm.op.Var_SN;
  *     "Collection:[" ExpressionList-opt "]"
  *     "List:[" ExpressionList-opt "]"
  *     "Array:[" ExpressionList-opt "]"
- *
- * also TODO:
  *     "Set:[" ExpressionList-opt "]"
  * </pre>
  */
@@ -123,7 +126,7 @@ public class ListExpression
     public TypeFit testFit(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         int cElements = exprs.size();
-        if (cElements > 0 && typeRequired != null && typeRequired.isA(pool().typeList()))
+        if (cElements > 0 && typeRequired != null && typeRequired.isA(pool().typeCollection()))
             {
             TypeConstant typeElement = typeRequired.resolveGenericType("Element");
             TypeFit      fit         = TypeFit.Fit;
@@ -150,8 +153,8 @@ public class ListExpression
             }
 
         ConstantPool pool = pool();
-        if (typeOut != null && typeOut.isA(pool.typeList()) &&
-            typeIn  != null && typeIn .isA(pool.typeList()))
+        if (typeOut != null && typeOut.isA(pool.typeCollection()) &&
+            typeIn  != null && typeIn .isA(pool.typeCollection()))
             {
             typeOut = typeOut.resolveGenericType("Element");
             typeIn  = typeIn .resolveGenericType("Element");
@@ -184,10 +187,23 @@ public class ListExpression
             typeElement = pool.typeObject();
             }
 
+        TypeConstant typeActual;
+        boolean      fSet;
+        if (typeRequired != null && typeRequired.isA(pool.typeSet()))
+            {
+            typeActual = pool.typeSet();
+            fSet       = true;
+            }
+        else
+            {
+            typeActual = pool.typeArray();
+            fSet       = false;
+            }
+
         TypeExpression exprTypeOld = type;
         if (exprTypeOld != null)
             {
-            TypeConstant   typeSeqType = pool.typeList().getType();
+            TypeConstant   typeSeqType = pool.typeCollection().getType();
             TypeExpression exprTypeNew = (TypeExpression) exprTypeOld.validate(ctx, typeSeqType, errs);
             if (exprTypeNew == null)
                 {
@@ -200,8 +216,10 @@ public class ListExpression
                     {
                     type = exprTypeNew;
                     }
-                TypeConstant typeElementNew = exprTypeNew.ensureTypeConstant(ctx).
-                    resolveAutoNarrowingBase().resolveGenericType("Element");
+
+                typeActual = exprTypeNew.ensureTypeConstant(ctx).resolveAutoNarrowingBase();
+
+                TypeConstant typeElementNew = typeActual.resolveGenericType("Element");
                 if (typeElementNew != null)
                     {
                     typeElement = typeElementNew;
@@ -209,7 +227,7 @@ public class ListExpression
                 }
             }
 
-        TypeConstant typeActual = pool.ensureParameterizedTypeConstant(pool.typeArray(), typeElement);
+        typeActual = pool.ensureParameterizedTypeConstant(typeActual, typeElement);
         if (cExprs > 0)
             {
             ctx = ctx.enterList();
@@ -239,17 +257,35 @@ public class ListExpression
         if (fConstant)
             {
             TypeConstant typeImpl = pool.ensureImmutableTypeConstant(
-                    pool.ensureParameterizedTypeConstant(pool.typeArray(),
-                    typeElement == null ? pool.typeObject() : typeElement));
-            if (typeRequired == null || typeImpl.isA(typeRequired)) // Array<Element> or List<Element>
+                    pool.ensureParameterizedTypeConstant(
+                        fSet ? pool.typeSet() : pool.typeArray(),
+                        typeElement == null ? pool.typeObject() : typeElement));
+            if (typeRequired == null || typeImpl.isA(typeRequired)) // [Array | List | Set]<Element>
                 {
-                Constant[] aconstVal = new Constant[cExprs];
-                for (int i = 0; i < cExprs; ++i)
+                if (fSet)
                     {
-                    aconstVal[i] = listExprs.get(i).toConstant();
-                    }
+                    ListSet<Constant> listVal = new ListSet<>(cExprs);
+                    for (int i = 0; i < cExprs; ++i)
+                        {
+                        Constant constEl = listExprs.get(i).toConstant();
+                        if (!listVal.add(constEl))
+                            {
+                            log(errs, Severity.ERROR, Compiler.SET_VALUES_DUPLICATE,
+                                    constEl.getValueString());
+                            }
+                        }
 
-                constVal = pool.ensureArrayConstant(typeImpl, aconstVal);
+                    constVal = pool.ensureSetConstant(typeImpl, listVal.toArray(Constant.NO_CONSTS));
+                    }
+                else
+                    {
+                    Constant[] aconstVal = new Constant[cExprs];
+                    for (int i = 0; i < cExprs; ++i)
+                        {
+                        aconstVal[i] = listExprs.get(i).toConstant();
+                        }
+                    constVal = pool.ensureArrayConstant(typeImpl, aconstVal);
+                    }
                 }
             }
 

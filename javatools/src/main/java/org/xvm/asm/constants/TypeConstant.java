@@ -2160,7 +2160,7 @@ public abstract class TypeConstant
                 case Annotation:
                     // call processMixins() for validation only; the "mixin" annotations will be
                     // processed separately at the end of buildTypeInfoImpl() method
-                    processMixins(constId, typeContrib, struct, new ArrayList<>(), errs);
+                    processMixins(constId, typeContrib, true, struct, new ArrayList<>(), errs);
                     break;
 
                 case Into:
@@ -2184,7 +2184,7 @@ public abstract class TypeConstant
                         break;
                         }
 
-                    processMixins(constId, typeContrib, struct, listProcess, errs);
+                    processMixins(constId, typeContrib, false, struct, listProcess, errs);
                     break;
 
                 case Delegates:
@@ -2309,7 +2309,7 @@ public abstract class TypeConstant
             listCondContribs.add(typeMixin);
 
             // call processMixins() for validation only
-            processMixins(constId, typeMixin, struct, new ArrayList<>(), errs);
+            processMixins(constId, typeMixin, false, struct, new ArrayList<>(), errs);
             }
 
         return listCondContribs == null
@@ -2342,12 +2342,12 @@ public abstract class TypeConstant
      * Process the "incorporates" contribution for annotations or mixins.
      */
     private void processMixins(IdentityConstant constId, TypeConstant typeContrib,
-                               ClassStructure struct,
+                               boolean fAnno, ClassStructure struct,
                                List<Contribution> listProcess, ErrorListener errs)
         {
         ConstantPool pool = getConstantPool();
 
-        if (struct.getFormat() == Component.Format.INTERFACE)
+        if (struct.getFormat() == Component.Format.INTERFACE && !fAnno)
             {
             log(errs, Severity.ERROR, VE_INCORPORATES_UNEXPECTED,
                 typeContrib.getValueString(),
@@ -3579,12 +3579,15 @@ public abstract class TypeConstant
                 if (idDelegate != null)
                     {
                     // ensure that the delegating body "belongs" to this layer in the chain
-                    MethodBody     head         = methodResult.getHead();
-                    MethodConstant idMethod     = head.getIdentity().ensureNestedIdentity(pool, constId);
-                    MethodBody     bodyDelegate = new MethodBody(
-                        idMethod, head.getSignature(), Implementation.Delegating, idDelegate);
-
-                    methodResult = new MethodInfo(Handy.appendHead(methodResult.getChain(), bodyDelegate));
+                    MethodBody     head     = methodResult.getHead();
+                    MethodConstant idMethod = head.getIdentity().ensureNestedIdentity(pool, constId);
+                    if (idMethod.getNestedDepth() == 2)
+                        {
+                        MethodBody bodyDelegate = new MethodBody(
+                            idMethod, head.getSignature(), Implementation.Delegating, idDelegate);
+                        methodResult = new MethodInfo(
+                            Handy.appendHead(methodResult.getChain(), bodyDelegate));
+                        }
                     }
                 }
 

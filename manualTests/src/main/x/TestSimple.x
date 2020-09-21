@@ -4,40 +4,32 @@ module TestSimple
 
     void run()
         {
-        import ecstasy.reflect.Annotation;
-
-        Type t = TestSimple;
-
-        for (Method m : t.methods)
-            {
-            Annotation[] annos = m.annotations;
-            if (annos.size > 0)
-                {
-                console.println($"{annos} {m}");
-                }
-            }
-
-        for (Property p : t.properties)
-            {
-            Annotation[] annos = p.annotations;
-            if (annos.size > 0)
-                {
-                console.println($"{annos} {p}");
-                }
-            }
+        Iface d = new Delegator(new Base());
+        console.println(d.value);
         }
 
-
-    @Path("method")
-    void test()
+    interface Iface
         {
+        @RO Int value.get()
+            {
+            console.println("default");
+            return 1;
+            }
         }
 
-    @Path("prop")
-    Int depth = 0;
+    class Base
+            implements Iface
+        {
+        @Override
+        @RO Int value.get()
+            {
+            console.println("base");
+            return 2;
+            }
+        }
 
-    mixin Path(String target = "")
-            into Method | Property
+    class Delegator(Base base)
+            delegates Iface(base)
         {
         }
     }

@@ -330,7 +330,10 @@ public class Compiler
      */
     public void logRemainingDeferredAsErrors()
         {
-        m_mgr.logDeferredAsErrors(m_errs);
+        if (!m_errs.hasSeriousErrors())
+            {
+            m_mgr.logDeferredAsErrors(m_errs);
+            }
         }
 
     /**
@@ -1245,6 +1248,10 @@ public class Compiler
      * Illegal literal value: {0}.
      */
     public static final String BAD_LITERAL                         = "COMPILER-163";
+    /**
+     * The Set constant contains duplicate values: {0}.
+     */
+    public static final String SET_VALUES_DUPLICATE                = "COMPILER-164";
     /**
      * {0} is not yet implemented.
      */

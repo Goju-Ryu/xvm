@@ -132,11 +132,12 @@ public class xArray
         // cache "Iterable.toArray()" method
         ITERABLE_TO_ARRAY = f_templates.getClassStructure("Iterable").findMethod("toArray", 1);
 
-        // cache "ListMap.construct(Key[], Value[])" constructor
-        LIST_MAP_CONSTRUCT = f_templates.getClassStructure("collections.ListMap").findMethod("construct", 2);
-
         // cache Mutability template
         MUTABILITY = (xEnum) f_templates.getTemplate("collections.Array.Mutability");
+
+        // cache "ConstHelper.createListSet" method
+        ClassStructure clzHelper = f_templates.getClassStructure("_native.ConstHelper");
+        CREATE_LIST_SET = clzHelper.findMethod("createListSet", 2);
 
         // mark native properties and methods
         markNativeProperty("capacity");
@@ -193,7 +194,20 @@ public class xArray
         {
         ArrayConstant constArray = (ArrayConstant) constant;
 
-        assert constArray.getFormat() == Constant.Format.Array;
+        boolean fSet;
+        switch (constArray.getFormat())
+            {
+            case Array:
+                fSet = false;
+                break;
+
+            case Set:
+                fSet = true;
+                break;
+
+            default:
+                throw new IllegalStateException();
+            }
 
         TypeConstant typeArray = constArray.getType();
         Constant[]   aconst    = constArray.getValue();
@@ -218,15 +232,44 @@ public class xArray
             }
 
         ClassComposition clzArray = f_templates.resolveClass(typeArray);
-        if (fDeferred)
+        if (fSet)
             {
-            Frame.Continuation stepNext = frameCaller -> frameCaller.pushStack(
-                    ((xArray) clzArray.getTemplate()).createArrayHandle(clzArray, ahValue));
-            return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
-            }
+            TypeConstant typeEl = typeArray.getParamType(0);
 
-        return frame.pushStack(
-                ((xArray) clzArray.getTemplate()).createArrayHandle(clzArray, ahValue));
+            if (fDeferred)
+                {
+                Frame.Continuation stepNext = frameCaller ->
+                    createListSet(frameCaller, typeEl, ahValue);
+                return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
+                }
+
+            return createListSet(frame, typeEl, ahValue);
+            }
+        else
+            {
+            if (fDeferred)
+                {
+                Frame.Continuation stepNext = frameCaller -> frameCaller.pushStack(
+                        ((xArray) clzArray.getTemplate()).createArrayHandle(clzArray, ahValue));
+                return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
+                }
+
+            return frame.pushStack(
+                    ((xArray) clzArray.getTemplate()).createArrayHandle(clzArray, ahValue));
+            }
+        }
+
+    private int createListSet(Frame frame, TypeConstant typeEl, ObjectHandle[] ahValue)
+        {
+        ConstantPool     pool      = frame.poolContext();
+        TypeConstant     typeArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), typeEl);
+        ClassComposition clzArray  = f_templates.resolveClass(typeArray);
+
+        ObjectHandle[] ahVar = new ObjectHandle[CREATE_LIST_SET.getMaxVars()];
+        ahVar[0] = typeEl.getTypeHandle();
+        ahVar[1] = ((xArray) clzArray.getTemplate()).createArrayHandle(clzArray, ahValue);
+
+        return frame.call1(CREATE_LIST_SET, null, ahVar, Op.A_STACK);
         }
 
     /**
@@ -1137,28 +1180,6 @@ public class xArray
     // ----- ObjectHandle helpers ------------------------------------------------------------------
 
     /**
-     * Construct a ListMap based on the arrays of keys and values.
-     *
-     * @param frame     the current frame
-     * @param clzMap    the ListMap class
-     * @param haKeys    the array of keys
-     * @param haValues  the array of values
-     * @param iReturn   the register to place the ListMap handle into
-     *
-     * @return R_CALL or R_EXCEPTION
-     */
-    public static int constructListMap(Frame frame, ClassComposition clzMap,
-                                       ArrayHandle haKeys, ArrayHandle haValues, int iReturn)
-        {
-        MethodStructure constructor = LIST_MAP_CONSTRUCT;
-        ObjectHandle[]  ahArg       = new ObjectHandle[constructor.getMaxVars()];
-        ahArg[0] = haKeys;
-        ahArg[1] = haValues;
-
-        return clzMap.getTemplate().construct(frame, constructor, clzMap, null, ahArg, iReturn);
-        }
-
-    /**
      * @return an immutable String array handle
      */
     public static ArrayHandle makeStringArrayHandle(StringHandle[] ahValue)
@@ -1260,7 +1281,6 @@ public class xArray
     // array of constructors
     private static MethodConstant[] CONSTRUCTORS = new MethodConstant[4];
     private static MethodStructure  ITERABLE_TO_ARRAY;
-    private static MethodStructure  LIST_MAP_CONSTRUCT;
 
     protected static final String[] ELEMENT_TYPE = new String[] {"Element"};
     protected static final String[] ARRAY        = new String[] {"collections.Array!<Element>"};
@@ -1268,4 +1288,6 @@ public class xArray
     private static ClassComposition s_clzStringArray;
     private static ClassComposition s_clzObjectArray;
     private static Map<TypeConstant, xArray> ARRAY_TEMPLATES;
+
+    private static MethodStructure CREATE_LIST_SET;
     }

@@ -991,7 +991,7 @@ public class Parser
                                     }
                                 // fall through
                             default:
-                                modifier.log(m_errorListener, m_source, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED);
+                                modifier.log(m_errorListener, m_source, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED, modifier.getValueText());
                                 break;
                             }
                         }
@@ -2480,12 +2480,14 @@ public class Parser
                 }
 
             // the expression has to be the L-Value
-            if (LVal instanceof Expression && !LVal.isLValueSyntax())
+            if (!LVal.isLValueSyntax())
                 {
                 log(Severity.ERROR, NOT_ASSIGNABLE, LVal.getStartPosition(), LVal.getEndPosition());
                 }
-
-            listLVals.add(LVal);
+            else
+                {
+                listLVals.add(LVal);
+                }
 
             if (!fFirst && match(Id.R_PAREN) != null)
                 {
@@ -3670,7 +3672,7 @@ public class Parser
                     }
 
                 // test to see if this is a tuple literal of the form "Tuple:(", or some other
-                // type literal of the form "type:{"
+                // type literal of the form "type:["
                 if (peek().getId() == Id.COLON)
                     {
                     Token colon = expect(Id.COLON);
@@ -4222,11 +4224,8 @@ public class Parser
      *
      * CollectionLiteral
      *     "[" ExpressionList-opt "]"                               # compile/runtime type is Array
-     *     TypeExpression ":[" ExpressionList-opt "]"               # type must be Collection, List,
-     *                                                              # Sequence, or Array
-     *
-     * TODO Set
-     *
+     *     TypeExpression ":[" ExpressionList-opt "]"               # type must be Collection, Set,
+     *                                                              # List, or Array
      * MapLiteral
      *     "[" Entries-opt "]"                                      # compile/runtime type is Map
      *     TypeExpression ":[" Entries-opt "]"                      # type must be Map
@@ -4268,6 +4267,7 @@ public class Parser
                 // this could be either an array or a range
                 // (fall through)
             case "Collection":
+            case "Set":
             case "List":
             case "Array":
                 {

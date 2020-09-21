@@ -2061,7 +2061,7 @@ public class InvocationExpression
             {
             if (tokName.isSpecial())
                 {
-                tokName.log(errs, getSource(), Severity.ERROR, Compiler.KEYWORD_UNEXPECTED);
+                tokName.log(errs, getSource(), Severity.ERROR, Compiler.KEYWORD_UNEXPECTED, tokName.getValueText());
                 return null;
                 }
 
@@ -2077,7 +2077,7 @@ public class InvocationExpression
                     return null;
                     }
 
-                if (nameLeft.isIdentityMode(ctx, false))
+                if (nameLeft.isIdentityMode(ctx, true))
                     {
                     // the left identity
                     // - methods are included because there is a left, but since it is to obtain a

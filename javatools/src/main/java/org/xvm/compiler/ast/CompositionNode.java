@@ -12,6 +12,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Version;
 import org.xvm.asm.VersionTree;
 
+import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 
 
@@ -59,6 +60,17 @@ public abstract class CompositionNode
 
 
     // ----- AstNode methods -----------------------------------------------------------------------
+
+    @Override
+    public Source getSource()
+        {
+        Source source = super.getSource();
+        if (source == null)
+            {
+            source = condition == null ? type.getSource() : condition.getSource();
+            }
+        return source;
+        }
 
     @Override
     public long getStartPosition()
