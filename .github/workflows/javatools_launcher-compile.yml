@@ -49,7 +49,6 @@ jobs:
     - name: make
       run: >
         make OS_NAME=${{matrix.MAKE_OS}}
-        -o javatools_launcher/build/exe/${{matrix.MAKE_OS}}_launcher
       working-directory: javatools_launcher/src/main/c
 
     - uses: actions/upload-artifact@v2
