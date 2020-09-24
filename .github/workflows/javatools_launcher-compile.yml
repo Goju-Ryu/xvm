@@ -58,6 +58,6 @@ jobs:
    # - name: make distcheck
    #   run: make distcheck
     - uses: actions/upload-artifact@v2
-        with:
-          name: launchers
-          path: javatools_launcher/build/exe/*
+      with:
+        name: launchers
+        path: javatools_launcher/build/exe/*
