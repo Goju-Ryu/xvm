@@ -9,6 +9,12 @@ on:
     # But only if there is a change in a file in this path
     paths: 
       - javatools_launcher/src/main/c/
+  
+  # Pull requests triggers the  script the same way as a push except it only works on master
+  pull_request:
+    branches: [ master ]
+    paths: 
+      - javatools_launcher/src/main/c/
 
   # This is a hook for manually activating the workflow
   # It can be activated in two ways
@@ -40,8 +46,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: print dir
-      run: ls -al
     - name: make
       run: >
         make OS_NAME=${{matrix.MAKE_OS}}
