@@ -17,13 +17,31 @@ const OSDirectory
         }
 
     @Override
-    Iterator<Directory> dirs();
+    Iterator<Directory> dirs()
+        {
+        Iterator<Directory?> nodes = names().map(name ->
+            {
+            assert File|Directory node := find(name);
+            return node.is(Directory) ? node : Null;
+            });
+
+        return nodes.filter(node -> node != Null).as(Iterator<Directory>);
+        }
 
     @Override
-    Iterator<File> files();
+    Iterator<File> files()
+        {
+        Iterator<File?> nodes = names().map(name ->
+            {
+            assert File|Directory node := find(name);
+            return node.is(File) ? node : Null;
+            });
+
+        return nodes.filter(node -> node != Null).as(Iterator<File>);
+        }
 
     @Override
-    Iterator<File> filesRecursively();
+    Iterator<File> filesRecursively() { TODO("native"); }
 
     @Override
     conditional Directory|File find(String name)
@@ -44,7 +62,7 @@ const OSDirectory
         }
 
     @Override
-    Boolean deleteRecursively();
+    Boolean deleteRecursively() { TODO("native"); }
 
     @Override
     Cancellable watch(FileWatcher watcher)
@@ -53,5 +71,5 @@ const OSDirectory
         }
 
     @Override
-    Cancellable watchRecursively(FileWatcher watcher);
+    Cancellable watchRecursively(FileWatcher watcher) { TODO("native"); }
     }
