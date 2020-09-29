@@ -29,6 +29,24 @@ class ClientDBMap<Key extends immutable Const, Value extends immutable Const>
         }
 
     @Override
+    conditional Value get(Key key)
+        {
+        ClientChange? change = this.change;
+        if (change != Null)
+            {
+            if (Value value := change.internalAdded.get(key))
+                {
+                return True, value;
+                }
+            if (change.internalRemoved.contains(key))
+                {
+                return False;
+                }
+            }
+        return serverDBMap.get(key);
+        }
+
+    @Override
     ClientDBMap put(Key key, Value value)
         {
         if (autoCommit)
@@ -45,31 +63,8 @@ class ClientDBMap<Key extends immutable Const, Value extends immutable Const>
     @Override
     @RO Collection<Value> values.get()
         {
-        TODO
-        // return new Collection<Value>(Constant, serverDBMap.values);
-        }
-
-    void commit()
-        {
-        ClientChange? change = this.change;
-        if (change == Null)
-            {
-            return;
-            }
-
-        Map<Key, Value> map = serverDBMap;
-        for (Key key : change.removed.keys)
-            {
-            map.remove(key);
-            }
-        map.putAll(change.added);
-
-        change = Null;
-        }
-
-    void rollback()
-        {
-        change = Null;
+        // TODO GG: this should return a proxy interface
+        return new Array<Value>(Constant, serverDBMap.values);
         }
 
     class CursorEntry
@@ -174,9 +169,12 @@ class ClientDBMap<Key extends immutable Const, Value extends immutable Const>
         {
         construct()
             {
-            added   = new HashMap();
-            removed = new HashMap();
+            internalAdded   = new HashMap();
+            internalRemoved = new HashMap();
             }
+
+        protected HashMap<Key, Value> internalAdded;
+        protected HashMap<Key, Value> internalRemoved;
 
         @Override
         ClientDBMap pre.get()
@@ -191,15 +189,39 @@ class ClientDBMap<Key extends immutable Const, Value extends immutable Const>
             }
 
         @Override
-        public/private Map<Key, Value> added;
+        Map<Key, Value> added.get()
+            {
+            return internalAdded.freeze(False);
+            }
 
         @Override
-        public/private Map<Key, Value> removed;
+        Map<Key, Value> removed.get()
+            {
+            return internalRemoved.freeze(False);
+            }
 
         void put(Key key, Value value)
             {
-            removed.remove(key);
-            added.put(key, value);
+            internalRemoved.remove(key);
+            internalAdded.put(key, value);
+            }
+
+        Boolean apply()
+            {
+            Map<Key, Value> map = serverDBMap;
+            for (Key key : internalRemoved.keys)
+                {
+                map.remove(key);
+                }
+            map.putAll(internalAdded);
+
+            change = Null;
+            return True;
+            }
+
+        void discard()
+            {
+            change = Null;
             }
         }
     }
