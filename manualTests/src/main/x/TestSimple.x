@@ -4,16 +4,29 @@ module TestSimple
 
     void run()
         {
-        console.println(Base.value);
+        Parent p = new Parent();
+        Parent.Child c = p.child();
+
+        if (c.is(Inner))
+            {
+            Object outer = c.outer;
+            console.println(outer.is(Service));
+            }
         }
 
-    class Base(Int value0)
+    service Parent()
         {
-        Int value0;
-
-        static Int value =
+        class Child
             {
-            return value0;
-            };
+            Int foo()
+                {
+                return 1;
+                }
+            }
+
+        Child child()
+            {
+            return new Child();
+            }
         }
     }
