@@ -1039,7 +1039,7 @@ public abstract class TypeConstant
         IdentityConstant idTuple  = getSingleUnderlyingClass(true);
         ClassStructure   clzTuple = (ClassStructure) idTuple.getComponent();
 
-        return clzTuple.getTupleParamTypes(getParamTypes());
+        return clzTuple.getTupleParamTypes(getConstantPool(), getParamTypes());
         }
 
     /**
@@ -4787,10 +4787,22 @@ public abstract class TypeConstant
             return Relation.IS_A;
             }
 
+        ConstantPool poolLeft = typeLeft.getConstantPool();
+        if (pool != poolLeft && !typeLeft.isShared(pool))
+            {
+            return this.isShared(poolLeft)
+                ? ((TypeConstant) poolLeft.register(this)).calculateRelation(typeLeft)
+                : Relation.INCOMPATIBLE;
+            }
+
         // since we're caching the relations on the constant itself, there is no reason to do it
-        // unless it's registered
-        TypeConstant typeRight        = (TypeConstant) pool.register(this);
-        TypeConstant typeLeftResolved = typeLeft.resolveTypedefs();
+        // unless it's registered; also make sure the left type is registered to the same pool
+        TypeConstant typeRight = this.getPosition() >= 0
+                ? this
+                : (TypeConstant) pool.register(this);
+        TypeConstant typeLeftResolved = poolLeft == pool && typeLeft.getPosition() >= 0
+                ? typeLeft
+                : (TypeConstant) pool.register(typeLeft);
 
         if (typeRight != this || typeLeftResolved != typeLeft)
             {
@@ -5891,16 +5903,28 @@ public abstract class TypeConstant
         }
 
     /**
+     * Obtain a run-time handle representing this type.
+     *
+     * @param pool  the ConstantPool to make the handle for
+     *
      * @return a handle for the Type object represented by this TypeConstant
      */
-    public TypeHandle getTypeHandle()
+    public TypeHandle ensureTypeHandle(ConstantPool pool)
         {
-        TypeHandle hType = m_handle;
-        if (hType == null)
+        if (isShared(pool))
             {
-            hType = m_handle = xRTType.makeHandle(this);
+            TypeHandle hType = m_handle;
+            if (hType == null)
+                {
+                hType = m_handle = xRTType.makeHandle((TypeConstant) pool.register(this), true);
+                }
+            return hType;
             }
-        return hType;
+        else
+            {
+            // don't cache a "foreign" handle
+            return xRTType.makeHandle(this, false);
+            }
         }
 
     /**
