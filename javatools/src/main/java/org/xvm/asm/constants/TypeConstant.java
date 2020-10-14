@@ -52,6 +52,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.OpSupport;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xOrdered;
@@ -5131,7 +5132,7 @@ public abstract class TypeConstant
      * Determine whether M2 could be invoked via a signature of M1, and M2 could then "super" to M1.
      *
      * @param typeBase  the type to determine the covariance with
-     * @param typeCtx   the type within which context the covariance is to be determined
+     * @param typeCtx   (optional) the type within which context the covariance is to be determined
      */
     public boolean isCovariantReturn(TypeConstant typeBase, TypeConstant typeCtx)
         {
@@ -5149,6 +5150,15 @@ public abstract class TypeConstant
             return typeThisR.isA(typeBaseR);
             }
 
+        if (typeCtx != null && typeBase.isFormalType())
+            {
+            // check if the formal type could be resolved in the specified context
+            TypeConstant typeBaseR = typeBase.resolveGenerics(getConstantPool(), typeCtx);
+            if (typeBaseR != typeBase)
+                {
+                return isCovariantReturn(typeBaseR, typeCtx);
+                }
+            }
         return false;
         }
 
@@ -5169,7 +5179,7 @@ public abstract class TypeConstant
      * Note: despite the name this method also handling the auto-narrowing covariance.
      *
      * @param typeBase  the type to determine the contravariance with
-     * @param typeCtx   the type within which context the covariance is to be determined
+     * @param typeCtx   (optional) the type within which context the covariance is to be determined
      */
     public boolean isContravariantParameter(TypeConstant typeBase, TypeConstant typeCtx)
         {
@@ -5188,6 +5198,16 @@ public abstract class TypeConstant
             TypeConstant typeBaseR = typeBase.resolveAutoNarrowing(pool, false, typeCtx);
 
             return typeBaseR.isA(typeThisR) && typeThisR.isA(typeBaseR);
+            }
+
+        if (typeCtx != null && typeBase.isFormalType())
+            {
+            // check if the formal type could be resolved in the specified context
+            TypeConstant typeBaseR = typeBase.resolveGenerics(getConstantPool(), typeCtx);
+            if (typeBaseR != typeBase)
+                {
+                return isContravariantParameter(typeBaseR, typeCtx);
+                }
             }
         return false;
         }
@@ -5943,8 +5963,11 @@ public abstract class TypeConstant
             {
             return frame.assignValue(iReturn, xBoolean.TRUE);
             }
-
-        ClassComposition clz = frame.ensureClass(this);
+        TypeComposition  clz1 = hValue1.getComposition();
+        TypeComposition  clz2 = hValue2.getComposition();
+        ClassComposition clz = clz1 == clz2 && clz1 instanceof ClassComposition
+            ? (ClassComposition) clz1
+            : frame.ensureClass(this);
         return clz.getTemplate().callEquals(frame, clz, hValue1, hValue2, iReturn);
         }
 
@@ -5965,7 +5988,11 @@ public abstract class TypeConstant
             return frame.assignValue(iReturn, xOrdered.EQUAL);
             }
 
-        ClassComposition clz = frame.ensureClass(this);
+        TypeComposition  clz1 = hValue1.getComposition();
+        TypeComposition  clz2 = hValue2.getComposition();
+        ClassComposition clz = clz1 == clz2 && clz1 instanceof ClassComposition
+            ? (ClassComposition) clz1
+            : frame.ensureClass(this);
         return clz.getTemplate().callCompare(frame, clz, hValue1, hValue2, iReturn);
         }
 
