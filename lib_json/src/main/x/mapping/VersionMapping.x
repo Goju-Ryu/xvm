@@ -1,21 +1,19 @@
-import ecstasy.temporal.TimeZoneCache;
-
 /**
- * A mapping for TimeZone values.
+ * A mapping for Version values.
  */
-const TimeZoneMapping
-        implements Mapping<TimeZone>
+const VersionMapping
+        implements Mapping<Version>
     {
     @Override
     String typeName.get()
         {
-        return "TimeZone";
+        return "Version";
         }
 
     @Override
     Serializable read(ElementInput in)
         {
-        return TimeZoneCache.find(in.readString(""));
+        return new Version(in.readString());
         }
 
     @Override

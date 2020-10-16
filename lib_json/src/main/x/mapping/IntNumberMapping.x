@@ -8,14 +8,13 @@ const IntNumberMapping<Serializable extends IntNumber>
     {
     construct()
         {
-        assert function IntNumber(IntLiteral) fn := CONVERSION.get(Serializable);
-        convert = fn.as(function Serializable(IntLiteral));
+        assert convert := CONVERSION.get(Serializable);
         }
 
     /**
      * The function that converts an IntLiteral to the desired integer type.
      */
-    function Serializable(IntLiteral) convert;
+    function IntNumber(IntLiteral) convert;
 
     @Override
     String typeName.get()
@@ -26,7 +25,7 @@ const IntNumberMapping<Serializable extends IntNumber>
     @Override
     Serializable read(ElementInput in)
         {
-        return convert(in.readIntLiteral());
+        return convert(in.readIntLiteral()).as(Serializable);
         }
 
     @Override
@@ -37,8 +36,8 @@ const IntNumberMapping<Serializable extends IntNumber>
 
     static Map<Type, function IntNumber(IntLiteral)> CONVERSION =
         Map:[
-                       numbers.IntNumber = (lit) -> lit.toVarInt()               ,
-            @Unchecked numbers.IntNumber = (lit) -> lit.toVarInt() .toUnchecked(),
+                       numbers.IntNumber = (lit) -> lit.toIntN()                 ,
+            @Unchecked numbers.IntNumber = (lit) -> lit.toIntN()   .toUnchecked(),
                        numbers.Int8      = (lit) -> lit.toInt8()                 ,
             @Unchecked numbers.Int8      = (lit) -> lit.toInt8()   .toUnchecked(),
                        numbers.Int16     = (lit) -> lit.toInt16()                ,
@@ -59,9 +58,9 @@ const IntNumberMapping<Serializable extends IntNumber>
             @Unchecked numbers.UInt64    = (lit) -> lit.toUInt()   .toUnchecked(),
                        numbers.UInt128   = (lit) -> lit.toUInt128()              ,
             @Unchecked numbers.UInt128   = (lit) -> lit.toUInt128().toUnchecked(),
-                       numbers.VarInt    = (lit) -> lit.toVarInt()               ,
-            @Unchecked numbers.VarInt    = (lit) -> lit.toVarInt() .toUnchecked(),
-                       numbers.VarUInt   = (lit) -> lit.toVarUInt()              ,
-            @Unchecked numbers.VarUInt   = (lit) -> lit.toVarUInt().toUnchecked(),
+                       numbers.IntN      = (lit) -> lit.toIntN()                 ,
+            @Unchecked numbers.IntN      = (lit) -> lit.toIntN() .toUnchecked()  ,
+                       numbers.UIntN     = (lit) -> lit.toUIntN()                ,
+            @Unchecked numbers.UIntN     = (lit) -> lit.toUIntN().toUnchecked()  ,
             ];
     }

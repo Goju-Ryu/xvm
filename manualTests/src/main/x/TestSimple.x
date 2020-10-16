@@ -2,52 +2,33 @@ module TestSimple
     {
     @Inject Console console;
 
+    package json import json.xtclang.org;
+
     void run()
         {
-        Derived d = new Derived<Int>();
-        console.println(d.testType(0));
-        console.println(d.testType(1));
-        console.println(d.testType(2));
+        reportModule(this:module);
+
+        reportPackage(ecstasy);
+        reportPackage(json);
+        reportPackage(ecstasy.reflect);
+        reportPackage(json.mapping);
         }
 
-    class Derived<Element>
-            extends Base<Element?>
+    void reportModule(Module m)
         {
-        construct()
-            {
-            console.println(Referent);
-
-            assert Referent == Element?;
-            assert Referent == Nullable|Element;
-            assert Type<Referent> == Type<Element?>;
-            assert Type<Referent> == Type<Nullable|Element>;
-            }
-
-        void testProp(Property prop)
-            {
-            assert Type<prop.Referent> == Type<Element?>;
-            }
-
-        Type testType(Int i)
-            {
-            switch (i)
-                {
-                case 0:
-                    return Element?;
-
-                case 1:
-                    return Nullable|Element;
-
-                case 2:
-                    return Referent+Element;
-
-                default:
-                    TODO
-                }
-            }
+        console.println($"module {m} version={m.version}");
         }
 
-    class Base<Referent>
+    void reportPackage(Package p)
         {
+        if (Module m := p.isModuleImport())
+            {
+            console.println($"import {m} version={m.version}");
+            }
+        else
+            {
+            console.println($"regular package {p}");
+            }
+
         }
     }

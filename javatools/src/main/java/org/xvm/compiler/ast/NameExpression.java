@@ -1552,11 +1552,6 @@ public class NameExpression
                 switch (constant.getFormat())
                     {
                     case Package:
-                        PackageStructure pkg = (PackageStructure) ((IdentityConstant) constant).getComponent();
-                        if (pkg.isModuleImport())
-                            {
-                            arg = pkg.getImportedModule().getIdentityConstant();
-                            }
                     case Module:
                     case Class:
                     case Typedef:
@@ -1613,7 +1608,7 @@ public class NameExpression
                     case Property:
                         {
                         TypeConstant typeTarget = target.getTargetType();
-                        TypeInfo     infoTarget = typeTarget.ensureTypeInfo(errs);
+                        TypeInfo     infoTarget = getTypeInfo(ctx, typeTarget, errs);
 
                         // TODO still some work here to mark the this (and out this's) as being used
                         PropertyInfo prop = infoTarget.findProperty((PropertyConstant) id);
@@ -1696,8 +1691,16 @@ public class NameExpression
                     && ((NameExpression) left).isIdentityMode(ctx, true);
             if (fIdMode)
                 {
-                NameExpression   exprLeft   = (NameExpression) left;
-                IdentityConstant idLeft     = exprLeft.getIdentity(ctx);
+                NameExpression   exprLeft = (NameExpression) left;
+                IdentityConstant idLeft   = exprLeft.getIdentity(ctx);
+                if (idLeft.getFormat() == Constant.Format.Package)
+                    {
+                    PackageStructure pkg = (PackageStructure) idLeft.getComponent();
+                    if (pkg.isModuleImport())
+                        {
+                        idLeft = pkg.getImportedModule().getIdentityConstant();
+                        }
+                    }
                 TypeInfo         info       = getTypeInfo(ctx, idLeft.getType(), errs);
                 IdentityConstant idChild    = info.findName(pool, sName);
                 TypeInfo         infoClz    = idLeft.getValueType(null).ensureTypeInfo(errs);
@@ -2170,7 +2173,7 @@ public class NameExpression
                                 {
                                 typeLeft = typeLeft.getParamType(0);
                                 }
-                            infoProp = typeLeft.ensureTypeInfo(errs).findProperty(idProp);
+                            infoProp = getTypeInfo(ctx, typeLeft, errs).findProperty(idProp);
                             }
                         else
                             {
@@ -2208,13 +2211,13 @@ public class NameExpression
                     if (target == null)
                         {
                         typeLeft = pool.ensureAccessTypeConstant(ctx.getThisType(), Access.PRIVATE);
-                        infoProp = typeLeft.ensureTypeInfo(errs).findProperty(idProp);
+                        infoProp = getTypeInfo(ctx, typeLeft, errs).findProperty(idProp);
                         }
                     else
                         {
                         idProp   = (PropertyConstant) target.getId();
                         typeLeft = target.getTargetType();
-                        infoProp = typeLeft.ensureTypeInfo(errs).findProperty(idProp);
+                        infoProp = getTypeInfo(ctx, typeLeft, errs).findProperty(idProp);
                         }
 
                     if (infoProp != null)
