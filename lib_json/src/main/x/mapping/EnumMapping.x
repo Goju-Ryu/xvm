@@ -19,15 +19,12 @@ const EnumMapping<EnumType extends Enum>
     @Override
     Serializable read(ElementInput in)
         {
-        // TODO GG return byName[in.readString()] ?: assert;
-        assert EnumType value := byName.get(in.readString());
-        return value;
+        return byName[in.readString()] ?: assert;
         }
 
     @Override
     void write(ElementOutput out, Serializable value)
         {
-        // TODO GG out.add(value.name);
-        out.add(value.as(Enum).name);
+        out.add(value.name);
         }
     }
