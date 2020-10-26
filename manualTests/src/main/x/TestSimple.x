@@ -4,35 +4,32 @@ module TestSimple
 
     void run()
         {
-        new Parent().test();
+        Method m = TestSimple.foo;
+        console.println(m);
+
+        assert m.is(Put);
+        console.println($"request={m.request}; path={m.path}");
         }
 
-    class Base()
+    mixin Put(String path="")
+            extends Http(Put)
         {
         }
 
-    class Parent()
-            extends Base
+    mixin Http(Request request=Get)
+            into Method
         {
-        void test()
-            {
-            new Child().test();
+        enum Request{Get, Post, Put, Delete}
 
-            Base   b = this.Base;
-            Parent p = this.Parent;
-            console.println(b);
-            console.println(p);
-            }
-
-        class Child
+        @Override
+        String toString()
             {
-            void test()
-                {
-                Base   b = this.Base;
-                Parent p = this.Parent;
-                console.println(b);
-                console.println(p);
-                }
+            return $"Http{request}";
             }
+        }
+
+    @Put("hello")
+    void foo()
+        {
         }
     }
