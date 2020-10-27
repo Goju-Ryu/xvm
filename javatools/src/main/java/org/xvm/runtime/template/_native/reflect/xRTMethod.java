@@ -28,14 +28,14 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.Mixin;
+import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
 import org.xvm.runtime.template.numbers.xInt64;
 
-import org.xvm.runtime.template.xBoolean;
-import org.xvm.runtime.template.xOrdered;
 
 /**
  * Native Method implementation.
@@ -59,7 +59,6 @@ public class xRTMethod
     public void initNative()
         {
         markNativeProperty("access");
-        markNativeProperty("annotations");
 
         markNativeMethod("formalParamNames" , null, null);
         markNativeMethod("formalReturnNames", null, null);
@@ -115,7 +114,7 @@ public class xRTMethod
                 frame.getThis().getType(), (MethodConstant) constant);
 
             return Op.isDeferred(hMethod)
-                ? hMethod.proceed(frame, frameCaller -> Op.R_NEXT)
+                ? hMethod.proceed(frame, Utils.NEXT)
                 : frame.pushStack(hMethod);
             }
 
@@ -130,9 +129,6 @@ public class xRTMethod
             {
             case "access":
                 return getPropertyAccess(frame, hMethod, iReturn);
-
-            case "annotations":
-                return getPropertyAnnotations(frame, hMethod, iReturn);
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -226,20 +222,6 @@ public class xRTMethod
         return frame.assignValue(iReturn, hAccess);
         }
 
-    /**
-     * Implements property: annotations.get()
-     */
-    public int getPropertyAnnotations(Frame frame, MethodHandle hMethod, int iReturn)
-        {
-        MethodStructure method = hMethod.getMethod();
-        Annotation[]    aAnno  = method.getAnnotations();
-
-        return aAnno.length > 0
-                ? new Utils.CreateAnnos(aAnno, iReturn).doNext(frame)
-                : frame.assignValue(iReturn,
-                    Utils.makeAnnoArrayHandle(frame.poolContext(), Utils.OBJECTS_NONE));
-        }
-
 
     // ----- method implementations ----------------------------------------------------------------
 
@@ -292,6 +274,15 @@ public class xRTMethod
 
     // ----- Object handle -------------------------------------------------------------------------
 
+    /**
+     * Obtain a handle for the specified method.
+     *
+     * @param frame       the current frame
+     * @param typeTarget  the type of the method target
+     * @param idMethod    the method id
+     *
+     * @return the resulting {@link MethodHandle} or a {@link DeferredCallHandle}
+     */
     public static ObjectHandle makeHandle(Frame frame, TypeConstant typeTarget, MethodConstant idMethod)
         {
         ConstantPool    pool   = frame.poolContext();

@@ -2,6 +2,7 @@ package org.xvm.runtime.template._native.reflect;
 
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.Annotation;
@@ -42,7 +43,6 @@ import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.IndexSupport;
-import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xEnum;
@@ -51,16 +51,18 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xOrdered;
 
-import org.xvm.runtime.template._native.reflect.xRTClass.ClassHandle;
-import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
-import org.xvm.runtime.template._native.reflect.xRTMethod.MethodHandle;
-import org.xvm.runtime.template._native.reflect.xRTProperty.PropertyHandle;
-
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.GenericArrayHandle;
 import org.xvm.runtime.template.collections.xTuple;
 
+import org.xvm.runtime.template.numbers.xInt64;
+
 import org.xvm.runtime.template.text.xString;
+
+import org.xvm.runtime.template._native.reflect.xRTClass.ClassHandle;
+import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
+import org.xvm.runtime.template._native.reflect.xRTMethod.MethodHandle;
+import org.xvm.runtime.template._native.reflect.xRTProperty.PropertyHandle;
 
 import org.xvm.util.ListMap;
 
@@ -526,23 +528,16 @@ public class xRTType
         TypeInfo                            infoTarget = typeTarget.ensureTypeInfo();
         Map<PropertyConstant, PropertyInfo> mapProps   = infoTarget.getProperties();
         ArrayList<ObjectHandle>             listProps  = new ArrayList<>(mapProps.size());
+
         for (Map.Entry<PropertyConstant, PropertyInfo> entry : mapProps.entrySet())
             {
             PropertyInfo infoProp = entry.getValue();
-            if (!infoProp.isConstant())
+            if (infoProp.isConstant())
                 {
-                continue;
+                listProps.add(xRTProperty.makeHandle(frame, typeTarget, entry.getKey()));
                 }
-
-            TypeConstant typeProperty = entry.getKey().getValueType(typeTarget);
-            ObjectHandle hProperty    = xRTProperty.INSTANCE.makeHandle(typeProperty);
-
-            listProps.add(hProperty);
             }
-
-        ArrayHandle hArray = xRTProperty.ensureArrayTemplate().createArrayHandle(
-                xRTProperty.ensureArrayComposition(), listProps.toArray(Utils.OBJECTS_NONE));
-        return frame.assignValue(iReturn, hArray);
+        return makePropertyArray(frame, typeTarget, listProps, iReturn);
         }
 
     /**
@@ -675,7 +670,7 @@ public class xRTType
             ahFunctions = new FunctionHandle[0];
             }
 
-        ArrayHandle hArray = xRTFunction.ensureArrayTemplate().createArrayHandle(
+        ArrayHandle hArray = xArray.INSTANCE.createArrayHandle(
                 xRTFunction.ensureConstructorArray(typeTarget, typeParent), ahFunctions);
         return frame.assignValue(iReturn, hArray);
         }
@@ -835,7 +830,7 @@ public class xRTType
                 }
             }
         FunctionHandle[] ahFunctions = listHandles.toArray(new FunctionHandle[0]);
-        ArrayHandle      hArray      = xRTFunction.ensureArrayTemplate().createArrayHandle(
+        ArrayHandle      hArray      = xArray.INSTANCE.createArrayHandle(
                 xRTFunction.ensureArrayComposition(), ahFunctions);
         return frame.assignValue(iReturn, hArray);
         }
@@ -891,21 +886,17 @@ public class xRTType
         TypeInfo                            infoTarget = typeTarget.ensureTypeInfo();
         Map<PropertyConstant, PropertyInfo> mapProps   = infoTarget.getProperties();
         ArrayList<ObjectHandle>             listProps  = new ArrayList<>(mapProps.size());
+
         for (Map.Entry<PropertyConstant, PropertyInfo> entry : mapProps.entrySet())
             {
             PropertyConstant idProp   = entry.getKey();
             PropertyInfo     infoProp = entry.getValue();
             if (!infoProp.isConstant() && idProp.getNestedDepth() == 1)
                 {
-                TypeConstant  typeProperty = idProp.getValueType(typeTarget);
-                PropertyHandle hProperty   = xRTProperty.INSTANCE.makeHandle(typeProperty);
-
-                listProps.add(hProperty);
+                listProps.add(xRTProperty.makeHandle(frame, typeTarget, idProp));
                 }
             }
-        ArrayHandle hArray = xRTProperty.ensureArrayTemplate().createArrayHandle(
-                xRTProperty.ensureArrayComposition(typeTarget), listProps.toArray(Utils.OBJECTS_NONE));
-        return frame.assignValue(iReturn, hArray);
+        return makePropertyArray(frame, typeTarget, listProps, iReturn);
         }
 
     /**
@@ -969,8 +960,7 @@ public class xRTType
             ahTypes[i] = aUnderlying[i].ensureTypeHandle(frame.poolContext());
             }
 
-        ArrayHandle hArray = ensureArrayTemplate().
-                createArrayHandle(ensureTypeArrayComposition(), ahTypes);
+        ArrayHandle hArray = xArray.INSTANCE.createArrayHandle(ensureTypeArrayComposition(), ahTypes);
         return frame.assignValue(iReturn, hArray);
         }
 
@@ -1092,7 +1082,7 @@ public class xRTType
 
         ArrayHandle hArgs = ahArg.length == 0
             ? ensureEmptyArgumentArray()
-            : ensureArrayTemplate().createArrayHandle(ensureArgumentArrayComposition(), ahArg);
+            : xArray.INSTANCE.createArrayHandle(ensureArgumentArrayComposition(), ahArg);
 
         ObjectHandle[] ahVar = new ObjectHandle[constructAnno.getMaxVars()];
         ahVar[0] = hClass;
@@ -1154,10 +1144,12 @@ public class xRTType
                 Constant constDef = type.getDefiningConstant();
                 if (constDef instanceof PropertyConstant)
                     {
-                    TypeConstant   typeProperty = ((PropertyConstant) constDef).getValueType(null);
-                    PropertyHandle hProperty    = xRTProperty.INSTANCE.makeHandle(typeProperty);
+                    ObjectHandle hProp = xRTProperty.makeHandle(frame, null, (PropertyConstant) constDef);
 
-                    return frame.assignValues(aiReturn, xBoolean.TRUE, hProperty);
+                    return Op.isDeferred(hProp)
+                        ? hProp.proceed(frame, frameCaller ->
+                            frameCaller.assignValues(aiReturn, xBoolean.TRUE, frameCaller.popStack()))
+                        : frame.assignValues(aiReturn, xBoolean.TRUE, hProp);
                     }
                 }
             }
@@ -1233,8 +1225,7 @@ public class xRTType
             ahTypes[i] = atypes[i].normalizeParameters().ensureTypeHandle(frame.poolContext());
             }
 
-        ArrayHandle hArray = ensureArrayTemplate().
-                createArrayHandle(ensureTypeArrayComposition(), ahTypes);
+        ArrayHandle hArray = xArray.INSTANCE.createArrayHandle(ensureTypeArrayComposition(), ahTypes);
         return frame.assignValues(aiReturn, xBoolean.TRUE, hArray);
         }
 
@@ -1441,24 +1432,24 @@ public class xRTType
             }
         }
 
-
-    // ----- Template, Composition, and handle caching ---------------------------------------------
-
-    /**
-     * @return the ClassTemplate for an Array of Type
-     */
-    public static xArray ensureArrayTemplate()
+    private int makePropertyArray(Frame frame, TypeConstant typeTarget,
+                                  List<ObjectHandle> listProps, int iReturn)
         {
-        xArray template = ARRAY_TEMPLATE;
-        if (template == null)
+        ObjectHandle[]   ahProps  = listProps.toArray(Utils.OBJECTS_NONE);
+        ClassComposition clzArray = xRTProperty.ensureArrayComposition(typeTarget);
+
+        if (Op.anyDeferred(ahProps))
             {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeTypeArray = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeType());
-            ARRAY_TEMPLATE = template = ((xArray) INSTANCE.f_templates.getTemplate(typeTypeArray));
-            assert template != null;
+            ObjectHandle hDeferred = new DeferredArrayHandle(clzArray, ahProps);
+            return hDeferred.proceed(frame,
+                frameCaller -> frameCaller.assignValue(iReturn, frameCaller.popStack()));
             }
-        return template;
+
+        return frame.assignValue(iReturn, xArray.INSTANCE.createArrayHandle(clzArray, ahProps));
         }
+
+
+    // ----- Composition and handle caching --------------------------------------------------------
 
     /**
      * @return the ClassComposition for an Array of Type
@@ -1500,7 +1491,7 @@ public class xRTType
         {
         if (TYPE_ARRAY_EMPTY == null)
             {
-            TYPE_ARRAY_EMPTY = ensureArrayTemplate().createArrayHandle(
+            TYPE_ARRAY_EMPTY = xArray.INSTANCE.createArrayHandle(
                 ensureTypeArrayComposition(), Utils.OBJECTS_NONE);
             }
         return TYPE_ARRAY_EMPTY;
@@ -1513,7 +1504,7 @@ public class xRTType
         {
         if (ARGUMENT_ARRAY_EMPTY == null)
             {
-            ARGUMENT_ARRAY_EMPTY = ensureArrayTemplate().createArrayHandle(
+            ARGUMENT_ARRAY_EMPTY = xArray.INSTANCE.createArrayHandle(
                 ensureArgumentArrayComposition(), Utils.OBJECTS_NONE);
             }
         return ARGUMENT_ARRAY_EMPTY;
@@ -1631,11 +1622,9 @@ public class xRTType
 
     // ----- data members --------------------------------------------------------------------------
 
-    private static xArray           ARRAY_TEMPLATE;
     private static ClassComposition TYPE_ARRAY_CLZCOMP;
     private static ArrayHandle      TYPE_ARRAY_EMPTY;
     private static ClassComposition LISTMAP_CLZCOMP;
-
 
     private static ClassTemplate    ANNOTATION_TEMPLATE;
     private static MethodStructure  ANNOTATION_CONSTRUCT;
